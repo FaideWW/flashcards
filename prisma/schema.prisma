@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["referentialIntegrity"]
+}
+
+datasource db {
+  provider             = "mysql"
+  url                  = env("DATABASE_URL")
+  referentialIntegrity = "prisma"
+}
+
+model Card {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  front     String   @db.VarChar(255)
+  back      String   @db.VarChar(255)
+  notes     String   @default("") @db.Text
+
+  items   Item[]
+  reviews Review[]
+}
+
+model Item {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  currentSrsStage Int      @default(0)
+  nextAvailable   DateTime @default(now())
+  timesReviewed   Int      @default(0)
+  timesCorrect    Int      @default(0)
+  timesIncorrect  Int      @default(0)
+  currentStreak   Int      @default(0)
+  maxStreak       Int      @default(0)
+  cardId          String
+  userId          String
+
+  card           Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  reviews        Review[]
+  reviewSessions ReviewSession[]
+
+  @@unique([userId, cardId])
+}
+
+model Review {
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+  secondsElapsed   Int
+  startingSrsStage Int
+  endingSrsStage   Int
+  timesIncorrect   Int      @default(0)
+  itemId           String
+  cardId           String
+  reviewSessionId  String
+
+  item          Item          @relation(fields: [itemId], references: [id])
+  card          Card          @relation(fields: [cardId], references: [id])
+  reviewSession ReviewSession @relation(fields: [reviewSessionId], references: [id])
+
+  @@index([itemId])
+}
+
+model ReviewSession {
+  id        String        @id @default(cuid())
+  startedAt DateTime
+  endedAt   DateTime?
+  status    SessionStatus @default(STARTED)
+
+  items   Item[]
+  reviews Review[]
+
+}
+
+enum SessionStatus {
+  STARTED
+  CANCELLED
+  COMPLETE
+}
